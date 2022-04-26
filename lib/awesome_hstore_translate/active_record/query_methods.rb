@@ -1,7 +1,9 @@
 module AwesomeHstoreTranslate
   module ActiveRecord
     module QueryMethods
-      def where(opts = :chain, *rest)
+      def where(*args)
+        opts, *rest = args
+
         if opts.is_a?(Hash)
           query = spawn
           translated_attrs = translated_attributes(opts)
@@ -30,12 +32,15 @@ module AwesomeHstoreTranslate
           check_if_method_has_arguments!(:order, args)
           query = spawn
           attrs = args
+          opts, *_rest = args
 
-          # TODO Remove this ugly hack
-          if args[0].is_a?(Hash)
-            attrs = args[0]
-          elsif args[0].is_a?(Symbol)
-            attrs = Hash[args.map {|attr| [attr, :asc]}]
+          return super if opts.is_a?(String)
+
+          case opts
+          when Hash
+            attrs = opts
+          when Symbol
+            attrs = args.index_with { :asc }
           end
 
           translated_attrs = translated_attributes(attrs)
@@ -46,7 +51,7 @@ module AwesomeHstoreTranslate
           end
 
           translated_attrs.each do |key, value|
-            query.order!(Arel.sql("#{key} -> '#{I18n.locale.to_s}' #{value}"))
+            query.order!(Arel.sql("#{key} -> '#{I18n.locale}' #{value}"))
           end
 
           query
